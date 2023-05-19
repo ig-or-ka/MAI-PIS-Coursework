@@ -26,6 +26,7 @@ def get_all_products(db):
 def update_products_table(prog):
     table: QTableWidget = prog.ui.select_products
     table.clear()
+    table.setRowCount(0)
     table.setColumnCount(6)
     table.verticalHeader().setVisible(False)
 
@@ -69,12 +70,81 @@ def update_products_table(prog):
     table.resizeColumnsToContents()
 
 
+def move_or_sell(prog):
+    table: QTableWidget = prog.ui.select_products
+    to_export = []
+
+    for i in range(table.rowCount()):
+        item_check:QTableWidgetItem = table.item(i,0)
+
+        if item_check.checkState() == Qt.CheckState.Checked:
+            item_index:QTableWidgetItem = table.item(i,1)
+            index = int(item_index.text())
+
+            item_name:QTableWidgetItem = table.item(i,2)
+
+            item_count:QTableWidgetItem = table.item(i,5)
+            item_count_all:QTableWidgetItem = table.item(i,4)
+            count_all = int(item_count_all.text())
+
+            item_price:QTableWidgetItem = table.item(i,3)
+            price = int(item_price.text())
+
+            try:
+                count = int(item_count.text())
+
+                if count <= 0:
+                    QMessageBox.about(prog.ui, "Ошибка", f"Укажите требуемое количество товара {item_name.text()} ({index})")
+                    return
+
+                elif count > count_all:
+                    QMessageBox.about(prog.ui, "Ошибка", f"Товара {item_name.text()} ({index}) недостаточно на складе")
+                    return
+                
+                else:
+                    to_export.append({'index':index, 'name':item_name.text(), 'price':price, 'count':count, 'new_count':count_all-count})
+
+            except:
+                QMessageBox.about(prog.ui, "Ошибка", f"Укажите числом требуемое количество товара {item_name.text()} ({index})")
+                return
+            
+    if len(to_export) > 0:
+        for product in to_export:
+            prog.db.execute("update products set count=? where id=?", (product['new_count'], product['index']))
+
+        if type(prog) == Filial:
+            prog.sells_to_export.extend(to_export)
+
+        prog.db.commit()
+
+        df = pd.DataFrame(to_export)
+        df.pop('new_count')
+        tm = datetime.now().strftime("%d.%m.%y %H.%M")
+
+        if type(prog) == MainStorage:
+            filename = f'files/Перемещение в филиал {tm}.csv'
+
+        else:
+            filename = f'files/Чек филиал {prog.filial_id} {tm}.csv'
+
+        df.to_csv(filename)
+
+        update_products_table(prog)
+
+        if type(prog) == MainStorage:
+            QMessageBox.about(prog.ui, "Готово", f'Документ "Перемещение в филиал" успешно сформирован!')
+
+        else:
+            QMessageBox.about(prog.ui, "Готово", f'Продажа совершена, чек сформирован!')
+
+
 class MainStorage:
     def __init__(self, ui):
         self.db = sqlite3.connect("files/main_storage.db")
         create_table(self.db)
         self.ui = ui
         self.init_ui()
+        update_products_table(self)
 
 
     def init_ui(self):
@@ -82,66 +152,16 @@ class MainStorage:
         self.ui.back.clicked.connect(self.ui.start_ui)
 
         self.ui.move_to_filial_cklick = self.move_to_filial_cklick
-        self.ui.move_to_filial.clicked.connect(self.ui.move_to_filial_cklick)
-
-        update_products_table(self)
+        self.ui.move_to_filial.clicked.connect(self.ui.move_to_filial_cklick)    
 
     
     def move_to_filial_cklick(self):
-        table: QTableWidget = self.ui.select_products
-        to_export = []
-
-        for i in range(table.rowCount()):
-            item_check:QTableWidgetItem = table.item(i,0)
-
-            if item_check.checkState() == Qt.CheckState.Checked:
-                item_index:QTableWidgetItem = table.item(i,1)
-                index = int(item_index.text())
-
-                item_name:QTableWidgetItem = table.item(i,2)
-
-                item_count:QTableWidgetItem = table.item(i,5)
-                item_count_all:QTableWidgetItem = table.item(i,4)
-                count_all = int(item_count_all.text())
-
-                item_price:QTableWidgetItem = table.item(i,3)
-                price = int(item_price.text())
-
-                try:
-                    count = int(item_count.text())
-
-                    if count <= 0:
-                        QMessageBox.about(self.ui, "Ошибка", f"Укажите требуемое количество товара {item_name.text()} ({index})")
-                        return
-
-                    elif count > count_all:
-                        QMessageBox.about(self.ui, "Ошибка", f"Товара {item_name.text()} ({index}) недостаточно на складе")
-                        return
-                    
-                    else:
-                        to_export.append({'index':index, 'name':item_name.text(), 'price':price, 'count':count, 'new_count':count_all-count})
-
-                except:
-                    QMessageBox.about(self.ui, "Ошибка", f"Укажите числом требуемое количество товара {item_name.text()} ({index})")
-                    return
-                
-        if len(to_export) > 0:
-            for product in to_export:
-                self.db.execute("update products set count=? where id=?", (product['new_count'], product['index']))
-
-            self.db.commit()
-
-            df = pd.DataFrame(to_export)
-            tm = datetime.now().strftime("%d.%m.%y %H.%M")
-            df.to_csv(f'files/Перемещение в филиал {tm}.csv')
-
-            update_products_table(self)
-
-            QMessageBox.about(self.ui, "Готово", f'Документ "Перемещение в филиал" успешно сформирован!')
+        move_or_sell(self)
 
 
 class Filial:
     def __init__(self, ui, filial_id):
+        self.sells_to_export = []
         self.filial_id = filial_id
         self.ui = ui
         self.db = sqlite3.connect(f"files/filial_{filial_id}.db")
@@ -156,6 +176,24 @@ class Filial:
 
         self.ui.receipt_invoice_click = self.receipt_invoice_click
         self.ui.receipt_invoice.clicked.connect(self.ui.receipt_invoice_click)
+
+        self.ui.sell_click = self.sell_click
+        self.ui.sell.clicked.connect(self.ui.sell_click)
+
+        self.ui.export_sells_click = self.export_sells_click
+        self.ui.export_sells.clicked.connect(self.ui.export_sells_click)
+
+
+    def sell_click(self):
+        move_or_sell(self)
+
+
+    def export_sells_click(self):
+        if len(self.sells_to_export) == 0:
+            QMessageBox.about(self.ui, "Ошибка", f"Не совершено ни одной покупки!")
+
+        else:
+            pass
 
 
     def receipt_invoice_click(self):
