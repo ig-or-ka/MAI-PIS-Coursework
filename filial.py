@@ -18,7 +18,7 @@ class Filial:
 
 
     def init_ui(self):
-        uic.loadUi('filial.ui', self.ui)
+        uic.loadUi('ui/filial.ui', self.ui)
         self.ui.back.clicked.connect(self.ui.start_ui)
 
         self.ui.receipt_invoice_click = self.receipt_invoice_click

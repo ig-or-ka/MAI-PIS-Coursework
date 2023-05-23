@@ -17,13 +17,13 @@ class Ui(QtWidgets.QMainWindow):
 
 
     def open_filial(self):
-        uic.loadUi('filial_id.ui', self)
+        uic.loadUi('ui/filial_id.ui', self)
         self.back.clicked.connect(self.start_ui)
         self.filial_done.clicked.connect(self.enter_filial_id)
 
 
     def start_ui(self):
-        uic.loadUi('start.ui', self)
+        uic.loadUi('ui/start.ui', self)
         self.main_storage.clicked.connect(self.open_main_storage)
         self.filial.clicked.connect(self.open_filial)
 

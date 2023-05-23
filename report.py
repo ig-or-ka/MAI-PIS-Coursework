@@ -8,7 +8,7 @@ class Report(QtWidgets.QDialog):
     def __init__(self, parent, df:pd.DataFrame):
         super(Report, self).__init__(parent)
         self.df = df
-        uic.loadUi('report.ui', self)
+        uic.loadUi('ui/report.ui', self)
         self.show()
         self.load_table()
 
