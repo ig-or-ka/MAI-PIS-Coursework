@@ -17,6 +17,7 @@ class MainStorage:
 
     def init_ui(self):
         uic.loadUi('ui/main_storage.ui', self.ui)
+        self.ui.setWindowTitle("Головной склад")
         self.ui.back.clicked.connect(self.ui.start_ui)
 
         self.ui.move_to_filial_cklick = self.move_to_filial_cklick

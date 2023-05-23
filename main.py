@@ -24,6 +24,7 @@ class Ui(QtWidgets.QMainWindow):
 
     def start_ui(self):
         uic.loadUi('ui/start.ui', self)
+        self.setWindowTitle("Главный экран")
         self.main_storage.clicked.connect(self.open_main_storage)
         self.filial.clicked.connect(self.open_filial)
 

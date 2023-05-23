@@ -9,6 +9,7 @@ class Report(QtWidgets.QDialog):
         super(Report, self).__init__(parent)
         self.df = df
         uic.loadUi('ui/report.ui', self)
+        self.setWindowTitle("Расходная накладная")
         self.show()
         self.load_table()
 
